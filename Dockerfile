@@ -7,8 +7,8 @@ WORKDIR /app
 # 复制依赖文件
 COPY requirements.txt ./
 
-# 更换为阿里云镜像源
-RUN sed -i 's#https\?://dl-cdn.alpinelinux.org/alpine#https://mirrors.aliyun.com/alpine#g' /etc/apk/repositories
+# 更换为USTC镜像源
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
 
 # 安装系统依赖
 RUN apk update && \
@@ -25,8 +25,8 @@ RUN apk add --no-cache tzdata && \
     echo "Asia/Shanghai" > /etc/timezone && \
     apk del tzdata
 
-# 设置 pip 使用阿里云镜像源
-RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple
+# 设置 pip 使用USTC镜像源
+RUN pip config set global.index-url https://mirrors.ustc.edu.cn/pypi/simple
 
 # 安装依赖
 RUN pip install --upgrade pip \
