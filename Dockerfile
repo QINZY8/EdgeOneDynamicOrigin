@@ -25,7 +25,7 @@ RUN apk add --no-cache tzdata && \
     echo "Asia/Shanghai" > /etc/timezone && \
     apk del tzdata
 
-# 设置 pip 使用清华源
+# 设置 pip 使用阿里云镜像源
 RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple
 
 # 安装依赖
