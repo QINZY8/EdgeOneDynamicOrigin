@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Docker Multi-Arch CI
 
 on:
   release:
@@ -7,25 +7,48 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: production 
+    environment: production
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
+    # 设置 QEMU 模拟器支持多架构
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    # 设置 Docker Buildx
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver: docker-container
+        platforms: linux/amd64,linux/arm64
 
+    # 登录 Docker Hub
     - name: Log in to Docker Hub
-      uses: docker/login-action@v1
+      uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
+    # 构建并推送多架构镜像
     - name: Build and push Docker image
-      uses: docker/build-push-action@v2
+      uses: docker/build-push-action@v5
       with:
         context: .
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: |
           itnotf/edgeone-dynamic-origin:${{ github.ref_name }}
           itnotf/edgeone-dynamic-origin:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    # 可选：测试镜像功能
+    - name: Test amd64 image
+      run: |
+        docker run --rm --platform linux/amd64 itnotf/edgeone-dynamic-origin:${{ github.ref_name }} --version
+        
+    - name: Test arm64 image
+      run: |
+        docker run --rm --platform linux/arm64 itnotf/edgeone-dynamic-origin:${{ github.ref_name }} --version
