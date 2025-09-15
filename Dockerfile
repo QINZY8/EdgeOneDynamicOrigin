@@ -8,7 +8,7 @@ WORKDIR /app
 COPY requirements.txt ./
 
 # 更换为清华镜像源
-RUN sed -i 's#https\?://dl-cdn.alpinelinux.org/alpine#https://mirrors.tuna.tsinghua.edu.cn/alpine#g' /etc/apk/repositories
+RUN sed -i 's#https\?://dl-cdn.alpinelinux.org/alpine#https://mirrors.aliyun.com/alpine#g' /etc/apk/repositories
 
 # 安装系统依赖
 RUN apk update && \
@@ -26,7 +26,7 @@ RUN apk add --no-cache tzdata && \
     apk del tzdata
 
 # 设置 pip 使用清华源
-RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple
 
 # 安装依赖
 RUN pip install --upgrade pip \
