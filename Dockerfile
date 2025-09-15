@@ -19,6 +19,12 @@ RUN apk update && \
     linux-headers \
     py3-psutil
 
+# 配置时区
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone && \
+    apk del tzdata
+
 # 设置 pip 使用清华源
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
