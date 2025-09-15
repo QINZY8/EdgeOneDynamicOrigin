@@ -13,25 +13,29 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 设置 QEMU 模拟器支持多架构
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
 
-    # 设置 Docker Buildx
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       with:
         driver: docker-container
         platforms: linux/amd64,linux/arm64
 
-    # 登录 Docker Hub
+    # 添加登录验证步骤
+    - name: Verify Docker Hub credentials
+      run: |
+        echo "Docker Hub username: ${{ secrets.DOCKER_USERNAME }}"
+        echo "Testing Docker Hub login..."
+        echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+        docker logout
+
     - name: Log in to Docker Hub
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    # 构建并推送多架构镜像
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -41,14 +45,3 @@ jobs:
         tags: |
           itnotf/edgeone-dynamic-origin:${{ github.ref_name }}
           itnotf/edgeone-dynamic-origin:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-    # 可选：测试镜像功能
-    - name: Test amd64 image
-      run: |
-        docker run --rm --platform linux/amd64 itnotf/edgeone-dynamic-origin:${{ github.ref_name }} --version
-        
-    - name: Test arm64 image
-      run: |
-        docker run --rm --platform linux/arm64 itnotf/edgeone-dynamic-origin:${{ github.ref_name }} --version
