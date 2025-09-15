@@ -1,4 +1,4 @@
-# EdgeOne Dynamic Origin ARM
+# EdgeOne Dynamic Origin
 
 EdgeOne 是腾讯云的边缘安全加速平台。该脚本为其提供动态更新源站组 IP 的功能。
 此功能特别适用于那些 IP 地址可能会变化的源站，确保 CDN 始终能够正确地获取最新的内容。比如仅有动态 IPV6 地址的服务器，
