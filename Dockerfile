@@ -7,7 +7,7 @@ WORKDIR /app
 # 复制依赖文件
 COPY requirements.txt ./
 
-# 更换为清华镜像源
+# 更换为阿里云镜像源
 RUN sed -i 's#https\?://dl-cdn.alpinelinux.org/alpine#https://mirrors.aliyun.com/alpine#g' /etc/apk/repositories
 
 # 安装系统依赖
