@@ -23,15 +23,19 @@ EdgeOne 是腾讯云的边缘安全加速平台。该脚本为其提供动态更
 
 #### Docker
 1. 可以直接拉取构建好的镜像运行
-   ```docker pull 2799214854/edgeone-dynamic-origin
-   ```docker run -d --network=host --name edgeone-dynamic-origin 2799214854/edgeone-dynamic-origin
+   ```bash
+   docker pull 2799214854/edgeone-dynamic-origin
+   ```
+   ```bash
+   docker run -d --network=host --name edgeone-dynamic-origin 2799214854/edgeone-dynamic-origin
+   ```
 浏览器访问 `http://localhost:54321` 进行配置。
 
 2. 本地构建镜像运行：
    ```bash
    docker build -t eodo:latest .
    ```
-运行容器：
+   运行容器：
    ```bash
    docker run -d --network=host --name eodo eodo:latest
    ```
