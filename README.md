@@ -1,6 +1,6 @@
 # EdgeOne Dynamic Origin
 
-### 原版构建arm镜像时会报错，修改了docker基础镜像为python:alpine3.20，另外还配置了安装必要的系统依赖和镜像加速，使两个架构构建正常
+### 原版构建arm镜像时会报错，修改了docker基础镜像为python:alpine3.20，配置了安装必要的系统依赖和镜像加速，修改了时区，使两个架构构建正常。
 
 EdgeOne 是腾讯云的边缘安全加速平台。该脚本为其提供动态更新源站组 IP 的功能。
 此功能特别适用于那些 IP 地址可能会变化的源站，确保 CDN 始终能够正确地获取最新的内容。比如仅有动态 IPV6 地址的服务器，
@@ -22,15 +22,20 @@ EdgeOne 是腾讯云的边缘安全加速平台。该脚本为其提供动态更
 4. 在 `http://localhost:54321` 中配置必要的配置项。
 
 #### Docker
-1. 构建镜像：
+1. 可以直接拉取构建好的镜像运行
+   ```docker pull 2799214854/edgeone-dynamic-origin
+   ```docker run -d --network=host --name edgeone-dynamic-origin 2799214854/edgeone-dynamic-origin
+浏览器访问 `http://localhost:54321` 进行配置。
+
+2. 本地构建镜像运行：
    ```bash
    docker build -t eodo:latest .
    ```
-2. 运行容器：
+运行容器：
    ```bash
    docker run -d --network=host --name eodo eodo:latest
    ```
-3. 浏览器访问 `http://localhost:54321` 进行配置。
+浏览器访问 `http://localhost:54321` 进行配置。
 
 ### WEB 界面
 ![img.png](img.png)
