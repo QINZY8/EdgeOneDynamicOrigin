@@ -22,6 +22,7 @@ EdgeOne 是腾讯云的边缘安全加速平台。该脚本为其提供动态更
 4. 在 `http://localhost:54321` 中配置必要的配置项。
 
 #### Docker
+##### 有两种运行方式：
 1. 可以直接拉取构建好的镜像运行
    ```bash
    docker pull 2799214854/edgeone-dynamic-origin
