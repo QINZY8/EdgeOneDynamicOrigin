@@ -28,8 +28,7 @@ EdgeOne 是腾讯云的边缘安全加速平台。该脚本为其提供动态更
    ```
    运行容器：
    ```bash
-   docker run -d --network=host --restart always --name edgeone-dynamic-origin 2799214854/edgeone-dyna
-mic-origin
+   docker run -d --network=host --restart always --name edgeone-dynamic-origin 2799214854/edgeone-dynamic-origin
    ```
 浏览器访问 `http://localhost:54321` 进行配置。
 
