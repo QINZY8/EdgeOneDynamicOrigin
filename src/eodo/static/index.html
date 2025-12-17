@@ -290,11 +290,20 @@ document.getElementById('configForm').onsubmit = function(e){
       });
 };
 // ---- 日志模态 ----
+// helper: 可靠滚动到最底部（包含重试）
+function scrollLogsToBottom(logsdom, tries=3, delay=40){
+    if(!logsdom) return;
+    try { logsdom.scrollTop = logsdom.scrollHeight; } catch(e){}
+    if(tries>0) setTimeout(()=>scrollLogsToBottom(logsdom, tries-1, delay), delay);
+}
+
 function fetchLogsModal(){
     let logsdom = document.getElementById('logs-modal-pre');
     logsdom.textContent = "加载中...";
     fetch('/api/logs').then(r=>r.json()).then(res=>{
         logsdom.textContent = res.logs||"无日志";
+        // 使用重试机制确保在不可见/未渲染时也能滚动到最底部
+        scrollLogsToBottom(logsdom, 5, 50);
     }).catch(()=>{logsdom.textContent="日志加载失败";});
 }
 function openLogModal(){
@@ -302,6 +311,8 @@ function openLogModal(){
     if(openLogModal._timer) clearInterval(openLogModal._timer);
     openLogModal._timer = setInterval(fetchLogsModal, 9000);
     let modal = document.getElementById('logModal');
+
+    // 仅在模态关闭时清理定时器；shown 事件在页面加载时注册以保证时序稳定
     modal.addEventListener('hidden.bs.modal', ()=>{
         if(openLogModal._timer){ clearInterval(openLogModal._timer); openLogModal._timer = null; }
     }, {once: true});
@@ -319,6 +330,17 @@ window.onload = function(){
     fetchStatus();
     fetchConfig();
     setInterval(()=>fetchStatus(), 4000);
+
+    // 确保模态显示后的滚动在页面加载时就注册（避免点击时因事件时序导致未触发）
+    let logModalEl = document.getElementById('logModal');
+    if(logModalEl && !logModalEl._shownHandler){
+        logModalEl._shownHandler = true;
+        logModalEl.addEventListener('shown.bs.modal', ()=>{
+            let logsdom = document.getElementById('logs-modal-pre');
+            // 延时稍等内容渲染完成后滚动
+            setTimeout(()=>{ scrollLogsToBottom(logsdom, 6, 60); }, 30);
+        });
+    }
 }
 </script>
 </body>
