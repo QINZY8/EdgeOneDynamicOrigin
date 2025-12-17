@@ -2,7 +2,7 @@ name: Docker Multi-Arch CI
 
 on:
   release:
-    types: [main]
+    types: [created]
 
 jobs:
   build:
