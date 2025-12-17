@@ -9,29 +9,31 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Docker镜像标签 (默认: latest)'
+        description: 'Docker镜像标签'
         required: false
-        default: 'latest'
+        default: 'manual-${GITHUB_SHA:0:7}'
         type: string
       push_to_registry:
         description: '是否推送到Docker Hub'
         required: false
-        default: true
-        type: boolean
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
       build_platforms:
         description: '构建平台架构'
         required: false
         default: 'linux/amd64,linux/arm64'
         type: string
-        options:
-          - linux/amd64
-          - linux/arm64
-          - linux/amd64,linux/arm64
-      enable_manifest_list:
-        description: '是否创建多架构manifest清单'
+      create_latest:
+        description: '是否创建latest标签'
         required: false
-        default: true
-        type: boolean
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 # 定义环境变量
 env:
@@ -42,88 +44,104 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     
     # 根据触发方式选择环境
     environment: ${{ github.event_name == 'workflow_dispatch' && 'staging' || 'production' }}
     
     steps:
+    - name: 检查工作流触发状态
+      run: |
+        echo "GitHub Event Name: ${{ github.event_name }}"
+        echo "GitHub Ref: ${{ github.ref }}"
+        echo "GitHub Ref Name: ${{ github.ref_name }}"
+        echo "GitHub SHA: ${{ github.sha }}"
+        echo "工作流被触发!"
+        
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0  # 获取完整历史记录，有助于Docker缓存
 
-    - name: Determine build parameters
+    - name: 确定构建参数
       id: vars
       run: |
-        # 根据触发方式确定标签
+        echo "=== 构建参数配置 ==="
+        
+        # 设置默认标签
         if [ "${{ github.event_name }}" = "release" ]; then
-          echo "trigger_type=release"
-          echo "image_tag=${{ github.ref_name }}"
-          echo "create_latest=true"
-          echo "push_images=true"
-        elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "trigger_type=manual"
-          echo "image_tag=${{ github.event.inputs.tag_name }}"
-          echo "create_latest=${{ github.event.inputs.enable_manifest_list }}"
-          echo "push_images=${{ github.event.inputs.push_to_registry }}"
+          TAG_NAME="${{ github.ref_name }}"
+          echo "触发方式: release"
+          echo "使用release标签: $TAG_NAME"
         else
-          echo "trigger_type=other"
-          echo "image_tag=dev"
-          echo "create_latest=false"
-          echo "push_images=true"
+          # 处理手动触发
+          TAG_NAME="${{ github.event.inputs.tag_name }}"
+          echo "触发方式: workflow_dispatch"
+          echo "输入标签: $TAG_NAME"
         fi
         
-        # 提取短提交ID
-        echo "git_sha_short=$(git rev-parse --short HEAD)" 
+        # 如果标签为空或为默认值，添加提交ID
+        if [[ "$TAG_NAME" == "manual-${GITHUB_SHA:0:7}" ]] || [[ -z "$TAG_NAME" ]]; then
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          FINAL_TAG="manual-$SHORT_SHA"
+        elif [[ "$TAG_NAME" == "latest" ]]; then
+          FINAL_TAG="latest"
+        else
+          FINAL_TAG="$TAG_NAME"
+        fi
         
-        # 设置平台
+        echo "最终镜像标签: $FINAL_TAG"
+        echo "image_tag=$FINAL_TAG" >> $GITHUB_OUTPUT
+        
+        # 推送设置
+        if [ "${{ github.event_name }}" = "release" ]; then
+          PUSH_IMAGES="true"
+          echo "release触发: 推送镜像到仓库"
+        else
+          PUSH_IMAGES="${{ github.event.inputs.push_to_registry }}"
+          echo "手动触发: 推送镜像 = $PUSH_IMAGES"
+        fi
+        
+        echo "push_images=$PUSH_IMAGES" >> $GITHUB_OUTPUT
+        
+        # 平台设置
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "build_platforms=${{ github.event.inputs.build_platforms }}"
+          PLATFORMS="${{ github.event.inputs.build_platforms }}"
         else
-          echo "build_platforms=linux/amd64,linux/arm64"
+          PLATFORMS="linux/amd64,linux/arm64"
         fi
+        echo "build_platforms=$PLATFORMS" >> $GITHUB_OUTPUT
         
-        # 当前时间戳
-        echo "timestamp=$(date -u +'%Y%m%d%H%M%S')"
-        
-        # 生成完整标签
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.tag_name }}" = "latest" ]; then
-          echo "full_tag=$IMAGE_NAME:latest"
-        elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "full_tag=$IMAGE_NAME:${{ github.event.inputs.tag_name }}-$(git rev-parse --short HEAD)"
-        elif [ "${{ github.event_name }}" = "release" ]; then
-          echo "full_tag=$IMAGE_NAME:${{ github.ref_name }}"
+        # latest标签设置
+        if [ "${{ github.event_name }}" = "release" ]; then
+          CREATE_LATEST="true"
+        elif [ "${{ github.event.name }}" = "workflow_dispatch" ]; then
+          CREATE_LATEST="${{ github.event.inputs.create_latest }}"
         else
-          echo "full_tag=$IMAGE_NAME:dev-$(git rev-parse --short HEAD)"
+          CREATE_LATEST="false"
         fi
+        echo "create_latest=$CREATE_LATEST" >> $GITHUB_OUTPUT
         
-        # 输出变量
-        echo "trigger_type=$trigger_type" >> $GITHUB_OUTPUT
-        echo "image_tag=$image_tag" >> $GITHUB_OUTPUT
-        echo "create_latest=$create_latest" >> $GITHUB_OUTPUT
-        echo "push_images=$push_images" >> $GITHUB_OUTPUT
-        echo "git_sha_short=$git_sha_short" >> $GITHUB_OUTPUT
-        echo "build_platforms=$build_platforms" >> $GITHUB_OUTPUT
-        echo "timestamp=$timestamp" >> $GITHUB_OUTPUT
-        echo "full_tag=$full_tag" >> $GITHUB_OUTPUT
-      env:
-        IMAGE_NAME: ${{ env.IMAGE_NAME }}
+        echo "平台: $PLATFORMS"
+        echo "创建latest标签: $CREATE_LATEST"
+        echo "=== 参数配置完成 ==="
 
     - name: Log build parameters
       run: |
-        echo "📋 构建参数:"
-        echo "触发方式: ${{ steps.vars.outputs.trigger_type }}"
-        echo "镜像标签: ${{ steps.vars.outputs.full_tag }}"
-        echo "Git提交: ${{ steps.vars.outputs.git_sha_short }}"
+        echo "📋 最终构建参数:"
+        echo "镜像标签: ${{ steps.vars.outputs.image_tag }}"
         echo "构建平台: ${{ steps.vars.outputs.build_platforms }}"
         echo "推送镜像: ${{ steps.vars.outputs.push_images }}"
         echo "创建latest标签: ${{ steps.vars.outputs.create_latest }}"
-        echo "时间戳: ${{ steps.vars.outputs.timestamp }}"
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
       with:
-        platforms: ${{ fromJSON(format('["{0}"]', replace(steps.vars.outputs.build_platforms, ',', '","'))) }}
+        platforms: |
+          arm64
+          amd64
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -134,22 +152,8 @@ jobs:
         platforms: ${{ steps.vars.outputs.build_platforms }}
         install: true
         use: true
-        config-inline: |
-          [registry."${{ env.REGISTRY }}"]
-            http = true
-            insecure = false
 
-    - name: Extract metadata for Docker
-      id: meta
-      run: |
-        # 为标签提取元数据
-        echo "ref_name=$(echo "${GITHUB_REF#refs/tags/}" || echo "manual-${GITHUB_SHA:0:7}")" >> $GITHUB_OUTPUT
-        echo "sha_short=${{ steps.vars.outputs.git_sha_short }}" >> $GITHUB_OUTPUT
-        echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
-        echo "build_number=${GITHUB_RUN_ID}" >> $GITHUB_OUTPUT
-        echo "version=${{ steps.vars.outputs.image_tag }}" >> $GITHUB_OUTPUT
-
-    - name: Log in to Docker Hub
+    - name: 登录Docker Hub
       if: steps.vars.outputs.push_images == 'true'
       uses: docker/login-action@v3
       with:
@@ -157,22 +161,19 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Prepare tags
-      id: tags
+    - name: 准备Docker标签
+      id: docker-tags
       run: |
-        # 准备标签列表
-        tags="${{ steps.vars.outputs.full_tag }}"
+        TAGS="${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.image_tag }}"
         
         # 如果需要添加latest标签
-        if [ "${{ steps.vars.outputs.create_latest }}" = "true" ] && [ "${{ steps.vars.outputs.trigger_type }}" = "release" ]; then
-          tags="$tags,$IMAGE_NAME:latest"
+        if [ "${{ steps.vars.outputs.create_latest }}" = "true" ]; then
+          TAGS="$TAGS,${{ env.IMAGE_NAME }}:latest"
+          echo "✅ 添加latest标签"
         fi
         
-        # 输出标签
-        echo "tags=$tags" >> $GITHUB_OUTPUT
-        echo "🔖 生成的标签: $tags"
-      env:
-        IMAGE_NAME: ${{ env.IMAGE_NAME }}
+        echo "最终Docker标签: $TAGS"
+        echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -180,67 +181,63 @@ jobs:
         context: .
         platforms: ${{ steps.vars.outputs.build_platforms }}
         push: ${{ steps.vars.outputs.push_images == 'true' }}
-        tags: ${{ steps.tags.outputs.tags }}
+        tags: ${{ steps.docker-tags.outputs.tags }}
         labels: |
           org.opencontainers.image.title=edgeone-dynamic-origin
           org.opencontainers.image.description=EdgeOne Dynamic Origin
-          org.opencontainers.image.url=https://github.com/${{ github.repository }}
           org.opencontainers.image.source=https://github.com/${{ github.repository }}
-          org.opencontainers.image.version=${{ steps.meta.outputs.version }}
-          org.opencontainers.image.created=${{ steps.meta.outputs.date }}
+          org.opencontainers.image.version=${{ steps.vars.outputs.image_tag }}
+          org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
           org.opencontainers.image.revision=${{ github.sha }}
-          org.opencontainers.image.vendor=${{ github.actor }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         provenance: false
-        outputs: |
-          type=registry,
-          name=${{ env.IMAGE_NAME }},
-          push=${{ steps.vars.outputs.push_images == 'true' }}
 
-    - name: Verify pushed images
+    - name: 验证推送的镜像
       if: steps.vars.outputs.push_images == 'true' && success()
       run: |
         echo "🔍 验证推送的镜像..."
         
-        # 登录Docker Hub查看manifest
-        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-        
         # 检查每个标签
-        IFS=',' read -ra TAG_ARRAY <<< "${{ steps.tags.outputs.tags }}"
+        IFS=',' read -ra TAG_ARRAY <<< "${{ steps.docker-tags.outputs.tags }}"
         for tag in "${TAG_ARRAY[@]}"; do
-          echo "检查标签: $tag"
-          docker buildx imagetools inspect "$tag" || echo "⚠️  无法检查 $tag"
+          echo "✅ 镜像已推送: $tag"
         done
         
-        docker logout
-        
         echo "✅ 镜像推送完成!"
-        echo "📦 镜像标签: ${{ steps.tags.outputs.tags }}"
-        echo "🏗️  构建平台: ${{ steps.vars.outputs.build_platforms }}"
+        echo "📦 镜像仓库: https://hub.docker.com/r/${{ env.IMAGE_NAME }}"
 
     - name: Build summary
       if: always()
       run: |
+        echo ""
         echo "📊 构建总结"
         echo "========================================"
         echo "工作流: ${{ github.workflow }}"
         echo "运行ID: ${{ github.run_id }}"
-        echo "触发方式: ${{ steps.vars.outputs.trigger_type }}"
+        echo "运行编号: ${{ github.run_number }}"
         echo "提交: ${{ github.sha }}"
         echo "分支/标签: ${{ github.ref }}"
         echo "镜像名称: ${{ env.IMAGE_NAME }}"
-        echo "镜像标签: ${{ steps.tags.outputs.tags }}"
+        echo "镜像标签: ${{ steps.docker-tags.outputs.tags }}"
         echo "构建平台: ${{ steps.vars.outputs.build_platforms }}"
         echo "推送状态: ${{ steps.vars.outputs.push_images == 'true' && '已推送' || '未推送' }}"
-        echo "创建时间: $(date)"
+        echo "构建时间: $(date)"
+        echo "========================================"
         
         if [ "${{ job.status }}" = "success" ]; then
           echo "✅ 构建成功!"
+          echo ""
           if [ "${{ steps.vars.outputs.push_images }}" = "true" ]; then
-            echo "🌐 查看镜像: https://hub.docker.com/r/${{ env.IMAGE_NAME }}/tags"
+            echo "🌐 Docker Hub地址: https://hub.docker.com/r/${{ env.IMAGE_NAME }}"
+            echo ""
+            IFS=',' read -ra TAG_ARRAY <<< "${{ steps.docker-tags.outputs.tags }}"
+            for tag in "${TAG_ARRAY[@]}"; do
+              echo "📦 $tag"
+            done
           fi
         else
           echo "❌ 构建失败!"
+          echo "请检查日志获取详细信息"
         fi
         echo "========================================"
