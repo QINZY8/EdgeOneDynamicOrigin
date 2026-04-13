@@ -221,20 +221,20 @@ class IPv6Tool:
         self.public_ipv6:set[str]|None = self.get_ipv6_list(select_iface)
 
     def get_ipv6_list(self, select_iface=""):
-        ipv6_list = []
-        addrs = psutil.net_if_addrs()
-        for iface, addr_list in addrs.items():
-            if select_iface and iface != select_iface:
-                continue
-            for addr in addr_list:
-                ip = addr.address.split('%')[0]
-                if addr.family == socket.AF_INET6 and self.is_public_ipv6(ip):
-                    ipv6_list.append(ip)
+        ipv6 = self.fetch_public_ipv6()
+        if ipv6 and self.is_public_ipv6(ipv6):
+            return {ipv6}
+        return None
 
-        if not ipv6_list:
+    def fetch_public_ipv6(self):
+        try:
+            response = requests.get('https://v6.ident.me', timeout=5)
+            response.raise_for_status()
+            return response.text.strip()
+        except Exception as exc:
+            logger.debug(exc)
+            logger.info(f"[{self.task_id}] 无法通过 v6.ident.me 获取公网 IPv6: {exc}")
             return None
-        else:
-            return set(sorted(ipv6_list))
 
     @staticmethod
     def is_public_ipv6(ip):
