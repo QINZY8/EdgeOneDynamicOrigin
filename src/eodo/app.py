@@ -229,10 +229,7 @@ class IPv6Tool:
             for addr in addr_list:
                 ip = addr.address.split('%')[0]
                 if addr.family == socket.AF_INET6 and self.is_public_ipv6(ip):
-                    if self.public_ipv6_check(ip):
-                        ipv6_list.append(ip)
-                    else:
-                        continue
+                    ipv6_list.append(ip)
 
         if not ipv6_list:
             return None
@@ -246,46 +243,6 @@ class IPv6Tool:
             return not (addr.is_link_local or addr.is_private or addr.is_loopback or addr.is_unspecified)
         except ValueError:
             return False  # 非法IP，就认为不是公网
-
-    def public_ipv6_check(self, ip):
-        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36 Edg/89.0.774.54"
-
-        def ipw_cn():
-            try:
-                res = requests.get(
-                    f"https://ipw.cn/api/ping/ipv6/{ip}/1/all",
-                    headers={"User-Agent": user_agent},
-                    timeout=5
-                )
-                if '"lossPacket":0' in res.text:
-                    logger.info(f"[{self.task_id}] ipw.cn Ping {ip} 无丢包")
-                    return True
-                else:
-                    logger.info(f"[{self.task_id}] ipw.cn Ping {ip} 超时")
-                    return False
-            except Exception as e:
-                logger.debug(e)
-                logger.info(f"[{self.task_id}] ipw.cn Ping {ip} 超时或异常")
-                return False
-        def ping6_network():
-            try:
-                res = requests.get(
-                    f"https://ping6.network/index.php?host={ip.replace(":", "%3A")}",
-                    headers={"User-Agent": user_agent},
-                    timeout=15
-                )
-                if ', 0% packet loss' in res.text:
-                    logger.info(f"[{self.task_id}] ping6.network Ping [{ip}] 无丢包")
-                    return True
-                else:
-                    logger.info(f"[{self.task_id}] ping6.network Ping {ip} 超时")
-                    return False
-            except Exception as e:
-                logger.debug(e)
-                logger.info(f"[{self.task_id}] ping6.network Ping {ip} 超时或异常")
-                return False
-
-        return True if ipw_cn() else ping6_network()
 
 
 # =================== 钉钉通知类 ===================
