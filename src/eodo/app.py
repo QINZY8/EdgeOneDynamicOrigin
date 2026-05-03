@@ -216,24 +216,36 @@ class QcloudClient:
 
 # =================== 工具类 ===================
 class IPv6Tool:
-    def __init__(self, select_iface="", task_id=""):
+    def __init__(self, ipv6_urls="", task_id=""):
         self.task_id = task_id
-        self.public_ipv6:set[str]|None = self.get_ipv6_list(select_iface)
+        self.public_ipv6:set[str]|None = self.get_ipv6_list(ipv6_urls)
 
-    def get_ipv6_list(self, select_iface=""):
-        ipv6 = self.fetch_public_ipv6()
-        if ipv6 and self.is_public_ipv6(ipv6):
-            return {ipv6}
+    def get_ipv6_list(self, ipv6_urls=""):
+        urls = [url.strip() for url in (ipv6_urls or "").split(",") if url.strip()]
+        if not urls:
+            urls = ["https://v6.ident.me"]
+
+        for url in urls:
+            ipv6 = self.fetch_public_ipv6(url)
+            if ipv6 and self.is_public_ipv6(ipv6):
+                return {ipv6}
         return None
 
-    def fetch_public_ipv6(self):
+    def fetch_public_ipv6(self, url):
         try:
-            response = requests.get('https://v6.ident.me', timeout=5)
+            response = requests.get(url, timeout=5)
             response.raise_for_status()
-            return response.text.strip()
+            text = response.text.strip()
+            try:
+                data = response.json()
+                if isinstance(data, dict) and isinstance(data.get('ip'), str):
+                    return data.get('ip').strip()
+            except ValueError:
+                pass
+            return text
         except Exception as exc:
             logger.debug(exc)
-            logger.info(f"[{self.task_id}] 无法通过 v6.ident.me 获取公网 IPv6: {exc}")
+            logger.info(f"[{self.task_id}] 无法通过 {url} 获取公网 IPv6: {exc}")
             return None
 
     @staticmethod
@@ -294,7 +306,7 @@ class Dingtalk:
 # =================== 任务处理 ===================
 def update_task(task_id=""):
     config = read_config()
-    iptool = IPv6Tool(config.get("SelectIface"), task_id)
+    iptool = IPv6Tool(config.get('Ipv6Urls', ''), task_id=task_id)
     dingtalk = Dingtalk(config.get('DingTalkWebhook'))
     eo_zones = config.get("EdgeOneZoneId")
     domains = config.get('DnsPodRecord')

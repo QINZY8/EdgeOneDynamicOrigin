@@ -44,7 +44,7 @@ EdgeOne 是腾讯云的边缘安全加速平台。该脚本为其提供动态更
 浏览器访问 `http://localhost:54321` 进行配置。
 
 ### WEB 界面
-![img.png](img.png)
+![img.jpeg](img.jpeg)
 
 #### 说明
 
