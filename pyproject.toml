@@ -22,3 +22,6 @@ eodo = "eodo.app:main"
 
 [tool.hatch.build]
 sources = ["src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/eodo"]
