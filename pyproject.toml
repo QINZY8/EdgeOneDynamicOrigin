@@ -1,6 +1,6 @@
 [project]
 name = "eodo2"
-version = "0.1.23"
+version = "0.1.25"
 description = "EdgeOneDynamicOrigin"
 readme = "README.md"
 requires-python = ">=3.12"
