@@ -35,7 +35,7 @@ RUN pip install --upgrade pip \
 # 复制项目代码
 COPY src ./src
 COPY README.md ./
-COPY img.png ./
+COPY img.jpeg ./
 
 # 设置环境变量（可选）
 ENV PYTHONUNBUFFERED=1
