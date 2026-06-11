@@ -79,9 +79,10 @@ def read_config():
 
 # =================== 腾讯云API类 ===================
 class QcloudClient:
-    def __init__(self, secret, service='teo', version='2022-09-01'):
+    def __init__(self, secret, service='teo', version='2022-09-01', host_override: str | None = None):
         self.service: str = service
-        self.host: str = f'{service}.tencentcloudapi.com'
+        # allow overriding host for international/custom endpoints
+        self.host: str = host_override if host_override else f'{service}.tencentcloudapi.com'
         self.version: str = version
         self.algorithm: str = 'TC3-HMAC-SHA256'
         self.content_type: str = 'application/json; charset=utf-8'
@@ -320,7 +321,10 @@ def update_task(task_id=""):
         logger.info(f"[{task_id}] 获取公网 IPV6 地址成功，地址为：{",".join(iptool.public_ipv6)}")
 
     if eo_zones:
-        eo_client = QcloudClient(secret=qcloud_secret, service='teo', version='2022-09-01')
+        eo_service = config.get('EdgeOneService', 'teo')
+        eo_version = config.get('EdgeOneVersion', '2022-09-01')
+        eo_host = config.get('EdgeOneHost') or None
+        eo_client = QcloudClient(secret=qcloud_secret, service=eo_service, version=eo_version, host_override=eo_host)
         for zone in eo_zones:
             origin_groups = eo_client.describe_origin_group(zone)
 

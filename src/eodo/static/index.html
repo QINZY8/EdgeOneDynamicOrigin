@@ -192,6 +192,21 @@
             </tbody>
           </table>
         </div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <label class="form-label">EdgeOne Service</label>
+            <input class="form-control" type="text" name="EdgeOneService" id="EdgeOneService" placeholder="teo">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">API Version</label>
+            <input class="form-control" type="text" name="EdgeOneVersion" id="EdgeOneVersion" placeholder="2022-09-01">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">自定义 Host (可选)</label>
+            <input class="form-control" type="text" name="EdgeOneHost" id="EdgeOneHost" placeholder="例如: teo.tencentcloudapi.com">
+            <div class="form-text">仅在需要使用国际/自定义域名时填写。</div>
+          </div>
+        </div>
         <!-- DnsPod记录配置 -->
         <div class="form-section-hd">DnsPod 记录配置</div>
         <div class="mb-2">
@@ -353,6 +368,9 @@ function fetchConfig(){
         document.getElementById('SecretId').value = res?.TencentCloud?.SecretId||"";
         document.getElementById('SecretKey').value = res?.TencentCloud?.SecretKey||"";
         setEdgeOneTable(Array.isArray(res?.EdgeOneZoneId) ? res.EdgeOneZoneId : (typeof res.EdgeOneZoneId==="string"?[res.EdgeOneZoneId] : []));
+        document.getElementById('EdgeOneService').value = res?.EdgeOneService||"teo";
+        document.getElementById('EdgeOneVersion').value = res?.EdgeOneVersion||"2022-09-01";
+        document.getElementById('EdgeOneHost').value = res?.EdgeOneHost||"";
         setDnsPodTable(Array.isArray(res?.DnsPodRecord) ? res.DnsPodRecord : (typeof res.DnsPodRecord==="string"?[res.DnsPodRecord] : []));
         document.getElementById('DingTalkWebhook').value = res?.DingTalkWebhook||"";
         document.getElementById('Ipv6Urls').value = res?.Ipv6Urls||"";
@@ -367,6 +385,9 @@ document.getElementById('configForm').onsubmit = function(e){
         SecretKey: this.SecretKey.value.trim()
       },
       EdgeOneZoneId: getEdgeOneZoneArr(),
+      EdgeOneService: this.EdgeOneService.value.trim() || 'teo',
+      EdgeOneVersion: this.EdgeOneVersion.value.trim() || '2022-09-01',
+      EdgeOneHost: this.EdgeOneHost.value.trim(),
       DnsPodRecord: getDnsPodRecordArr(),
       DingTalkWebhook: this.DingTalkWebhook.value.trim(),
       Ipv6Urls: this.Ipv6Urls.value.trim(),
